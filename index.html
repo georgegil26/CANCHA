@@ -1,0 +1,612 @@
+<!doctype html><html lang="es"><head><meta charset="utf8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Protocolo de cancha</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Archivo:wght@400;500;600;700&display=swap">
+<style>
+:root {
+  color-scheme: light;
+  --ground:#f2f4ef; --card:#ffffff; --line:#d7ddd2;
+  --ink:#10241a; --ink-2:#4a5c50; --ink-3:#7d8d82;
+  --pitch:#15613c; --rest:#5b6b60; --amber:#c87a12; --amber-sf:#fdf3e2;
+  --alarma:#a8321e; --alarma-sf:#fdeeea;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:#0b1a13; --card:#11251b; --line:#23402f;
+    --ink:#eaf2ec; --ink-2:#a9bcae; --ink-3:#74897c;
+    --pitch:#43b37a; --rest:#8ba393; --amber:#f0ad4a; --amber-sf:#2a2114;
+    --alarma:#f08a72; --alarma-sf:#2d1713;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:#0b1a13; --card:#11251b; --line:#23402f;
+  --ink:#eaf2ec; --ink-2:#a9bcae; --ink-3:#74897c;
+  --pitch:#43b37a; --rest:#8ba393; --amber:#f0ad4a; --amber-sf:#2a2114;
+  --alarma:#f08a72; --alarma-sf:#2d1713;
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.5; -webkit-text-size-adjust:100%; }
+.hoja { max-width:760px; margin:0 auto; padding-inline:16px; padding-block:22px 60px; }
+h1 { font-family:var(--display); font-size:clamp(2rem,1.4rem + 2.6vw,2.9rem);
+  font-weight:700; line-height:1; margin:0; text-transform:uppercase; text-wrap:balance; }
+.lede { color:var(--ink-2); margin:6px 0 20px; font-size:.95rem; }
+section { margin-bottom:18px; }
+h2 { font-family:var(--display); font-size:1.32rem; font-weight:600;
+  text-transform:uppercase; letter-spacing:.035em; margin:0 0 10px; color:var(--ink-2); }
+.caja { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+.reloj { background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:18px 16px 16px; text-align:center; position:relative; overflow:hidden; }
+.reloj::before { content:""; position:absolute; inset:0 0 auto 0; height:4px;
+  background:var(--estado,var(--line)); transition:background .2s; }
+.etapa { font-size:.72rem; text-transform:uppercase; letter-spacing:.13em;
+  color:var(--ink-3); font-weight:600; margin-bottom:2px; }
+.fase { font-family:var(--display); font-size:clamp(2.2rem,1.3rem + 6.4vw,3.9rem);
+  font-weight:700; line-height:.95; text-transform:uppercase;
+  color:var(--estado,var(--ink)); overflow-wrap:anywhere; }
+.cuenta { font-family:var(--display); font-size:clamp(3.6rem,2rem + 12vw,6.4rem);
+  font-weight:700; line-height:.9; font-variant-numeric:tabular-nums; margin:2px 0 0; }
+.cuenta small { font-size:.3em; font-weight:600; color:var(--ink-3); margin-left:.15em; }
+.siguiente { color:var(--ink-2); font-size:.92rem; min-height:1.4em; margin-top:4px; }
+.siguiente b { color:var(--ink); font-weight:600; }
+.riel { height:7px; border-radius:4px; background:var(--line); overflow:hidden; margin:14px 0 4px; }
+.lleno { height:100%; width:0; background:var(--estado,var(--amber)); transition:width .25s linear; }
+.total { color:var(--ink-3); font-size:.8rem; font-variant-numeric:tabular-nums; }
+.mandos { display:flex; gap:10px; margin-top:14px; }
+button { font:inherit; font-weight:600; cursor:pointer; border-radius:11px;
+  padding:15px 18px; border:1.5px solid var(--line); background:var(--card);
+  color:var(--ink); flex:1; min-height:52px; }
+button.grande { flex:2; background:var(--pitch); border-color:var(--pitch); color:#fff; font-size:1.05rem; }
+button:disabled { opacity:.4; cursor:default; }
+button:focus-visible { outline:3px solid var(--amber); outline-offset:2px; }
+.ajuste { margin-top:.75rem; padding:.7rem .8rem; border:1px solid var(--line);
+  border-radius:10px; font-size:.85rem; }
+.ajuste > div { display:flex; gap:.4rem; margin-top:.5rem; }
+.ajuste button { flex:1; font-size:.8rem; padding:.55rem .3rem; }
+.ajuste b { font-variant-numeric:tabular-nums; }
+
+/* ---- enlace con el sensor ---- */
+.enlace { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.enlace button { flex:0 0 auto; min-width:168px; }
+.sem { display:flex; align-items:center; gap:8px; font-size:.92rem; color:var(--ink-2); }
+.bolita { width:11px; height:11px; border-radius:50%; background:var(--ink-3); flex:none; }
+.bolita.on { background:var(--pitch); }
+.bolita.espera { background:var(--amber); }
+.bolita.mal { background:var(--alarma); }
+.sem b { color:var(--ink); font-weight:600; }
+.chapa { display:inline-block; font-size:.78rem; font-weight:600; padding:.2em .6em;
+  border-radius:999px; background:var(--amber-sf); color:var(--amber);
+  border:1px solid color-mix(in srgb, var(--amber) 35%, transparent); }
+.sinble { margin-top:12px; padding:12px; border-radius:10px;
+  background:var(--alarma-sf); border:1px solid color-mix(in srgb, var(--alarma) 30%, transparent);
+  font-size:.89rem; color:var(--ink-2); }
+.sinble strong { color:var(--ink); }
+
+ol.pasos { margin:0; padding-left:1.3em; }
+ol.pasos li { margin-bottom:9px; }
+ol.pasos li:last-child { margin-bottom:0; }
+code { font-family:ui-monospace,Menlo,Consolas,monospace; background:var(--ground);
+  border:1px solid var(--line); padding:.1em .35em; border-radius:5px; font-size:.88em; }
+label.check { display:flex; gap:11px; align-items:flex-start; padding:9px 0;
+  border-bottom:1px solid var(--line); cursor:pointer; }
+label.check:last-of-type { border-bottom:0; }
+label.check input { width:22px; height:22px; margin:1px 0 0; flex:none; accent-color:var(--pitch); }
+label.check span { flex:1; }
+label.check input:checked + span { color:var(--ink-3); text-decoration:line-through; }
+.envoltura { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:.92rem; }
+th, td { padding:7px 9px; border-bottom:1px solid var(--line); text-align:left; }
+th { font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); }
+td.t { font-variant-numeric:tabular-nums; color:var(--ink-2); white-space:nowrap; }
+tr.mov td.n { font-weight:700; color:var(--pitch); }
+tr.spr td.n { font-weight:700; color:var(--amber); }
+tr.des td.n { color:var(--ink-3); }
+tbody tr:last-child td { border-bottom:0; }
+tr.activa { background:var(--amber-sf); }
+.campos { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:11px; }
+.campo { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.campo span { font-size:.78rem; color:var(--ink-2); font-weight:500; }
+.campo span em { font-style:normal; color:var(--ink-3); font-weight:400; }
+.campo input { font:inherit; font-variant-numeric:tabular-nums; padding:11px 12px;
+  border-radius:9px; border:1.5px solid var(--line); background:var(--ground);
+  color:var(--ink); width:100%; min-width:0; }
+.campo input:focus-visible { outline:2px solid var(--amber); outline-offset:1px; border-color:var(--amber); }
+.nota { color:var(--ink-2); font-size:.89rem; }
+.nota strong { color:var(--ink); }
+.aviso { border-left:3px solid var(--amber); padding-left:12px; color:var(--ink-2);
+  font-size:.9rem; margin-top:12px; }
+.pista { display:flex; gap:10px; align-items:center; margin:10px 0 0;
+  font-variant-numeric:tabular-nums; font-size:.85rem; color:var(--ink-2); }
+.pista .cono { width:30px; height:30px; border-radius:50%; background:var(--pitch);
+  color:#fff; display:grid; place-items:center; font-weight:700; flex:none; }
+.pista .tramo { flex:1; height:2px; background:var(--line); position:relative; }
+.pista .tramo::after { content:"10 m"; position:absolute; top:-18px; left:50%;
+  transform:translateX(-50%); font-size:.7rem; color:var(--ink-3); }
+</style></head><body>
+<div class="hoja">
+
+<h1>Protocolo de cancha</h1>
+<p class="lede">Sensor XIAO MG24 · sketch 18 <b>v48</b> · 324 s · cuatro conos cada 10 m</p>
+
+<section>
+  <h2>Arrancar el sensor</h2>
+  <div class="caja">
+    <div class="enlace">
+      <button id="btnBle">Conectar sensor</button>
+      <div class="sem"><span class="bolita" id="bolita"></span><span id="estadoBle">Sin conectar</span></div>
+    </div>
+    <p class="nota" style="margin:12px 0 0">
+      Con el sensor conectado, <strong>Empezar manda la orden por Bluetooth y
+      el cero lo pone este teléfono</strong>: la placa arranca en el instante
+      en que le llega el comando, y entre los dos hay un intervalo de conexión
+      —20 a 250 ms— en vez de tu tiempo de reacción. Es el camino bueno.
+    </p>
+    <p class="nota" style="margin:8px 0 0">
+      Sin conectar, la página funciona igual que siempre: arrancas el sensor
+      con los <strong>cinco golpecitos</strong> y le das a Empezar cuando veas
+      los <strong>tres destellos largos</strong>. Pero entonces el cero lo pone
+      la placa y el guion queda corrido uno o dos segundos.
+    </p>
+    <div class="sinble" id="sinBle" hidden></div>
+  </div>
+</section>
+
+<section>
+  <div class="reloj" id="reloj">
+    <div class="etapa" id="etapa">Sin arrancar</div>
+    <div class="fase" id="fase">Listo</div>
+    <div class="cuenta" id="cuenta">—</div>
+    <div class="siguiente" id="siguiente">Conecta el sensor, o arráncalo a golpes y dale a Empezar</div>
+    <div class="riel"><div class="lleno" id="lleno"></div></div>
+    <div class="total" id="total">0:00 / 5:54</div>
+    <div class="mandos">
+      <button class="grande" id="btnIr">Empezar</button>
+      <button id="btnParar" disabled>Parar</button>
+    </div>
+    <div class="ajuste" id="ajuste" hidden>
+      <span>El cronómetro va <b id="desfase">0</b> s respecto al sensor</span>
+      <div>
+        <button id="btnMas">el sensor arrancó antes −1 s</button>
+        <button id="btnMenos">arrancó después +1 s</button>
+      </div>
+    </div>
+  </div>
+  <p class="aviso">
+    Sube el volumen: el LED va tapado dentro de la carcaza y pegado al pie,
+    así que <strong>los pitos son la única señal</strong> mientras corres.
+    Tres pitos = empezó a grabar. Grave = empieza un QUIETO. Agudo = empieza
+    un tramo. Largo y grave = terminó.</p>
+  <p class="aviso">
+    Al mandar la orden, <strong>la placa suelta el Bluetooth a propósito</strong>:
+    escribir en la flash con la radio encendida tumba el enlace. Que diga
+    «desconectado, grabando» es lo correcto, no un fallo.</p>
+</section>
+
+<section>
+  <div class="caja">
+    <h2 style="margin-top:0">Qué busca esta sesión</h2>
+    <p class="nota" style="margin:0 0 10px">
+      <strong>Seis sprints iguales.</strong> Hasta ahora había dos, y con dos
+      no se puede saber si el sensor midió mal o si corriste distinto. Con seis
+      repeticiones y la distancia medida, se separan las dos cosas — y esa es
+      la única pregunta que decide si el aparato sirve.</p>
+    <p class="nota" style="margin:0">
+      Caminar y trotar siguen ahí aunque no son el objetivo: son el andamio que
+      fija el rango bajo del modelo. Sin ellos, los seis sprints no sirven para
+      ajustar nada.</p>
+    <div class="pista">
+      <div class="cono">A</div><div class="tramo"></div>
+      <div class="cono">B</div><div class="tramo"></div>
+      <div class="cono">C</div><div class="tramo"></div>
+      <div class="cono">D</div>
+    </div>
+    <p class="nota" style="margin-top:14px">
+      Caminar y trotar son <strong>A↔C (20 m)</strong>. Los sprints van
+      <strong>A→C al máximo frenando en D</strong>, y el siguiente de vuelta
+      <strong>D→B frenando en A</strong>: cada sprint acaba donde empieza el
+      siguiente, sin devolverse caminando.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Antes de salir</h2>
+  <div class="caja" id="listaPrevia">
+    <label class="check"><input type="checkbox" data-k="m1"><span>Grabados <strong>los dos</strong> archivos (<code>.ino</code> y <code>compresor.h</code>), y confirmado con <code>INFO</code> que diga <code>Firmware: v48</code></span></label>
+    <label class="check"><input type="checkbox" data-k="m2"><span><code>BORRAR</code> en el Monitor — solo caben <strong>2 sesiones</strong> por flash a esta duración</span></label>
+    <label class="check"><input type="checkbox" data-k="m3"><span>Probado el <strong>Conectar sensor</strong> aquí en la mesa, con el USB puesto, y visto en el Monitor <code>BLE: REC -- cero fijado por el celular</code></span></label>
+    <label class="check"><input type="checkbox" data-k="m4"><span>Batería cargada — míralo con <code>BAT</code>, sin el USB puesto</span></label>
+    <label class="check"><input type="checkbox" data-k="m5"><span><strong>Cuatro conos</strong> o marcas, medidos con cinta cada 10 m</span></label>
+    <label class="check"><input type="checkbox" data-k="m6"><span>Distancia real anotada abajo (si no son 10.0 exactos, el número que sea)</span></label>
+    <label class="check"><input type="checkbox" data-k="m7"><span>Volumen del celular arriba</span></label>
+    <label class="check"><input type="checkbox" data-k="m8"><span>Sensor firme entre tobillo y empeine, sin que baile</span></label>
+  </div>
+</section>
+
+<section>
+  <h2>El guion</h2>
+  <div class="caja">
+    <div class="envoltura">
+      <table>
+        <thead><tr><th>Desde</th><th>Hasta</th><th>Qué haces</th></tr></thead>
+        <tbody id="tablaGuion"></tbody>
+      </table>
+    </div>
+    <p class="nota" style="margin-top:12px">
+      Llegas y <strong>te quedas quieto</strong> hasta que cambie la fase. Los
+      20 s entre sprints son para recuperar: <strong>el sexto va a salir más
+      lento que el primero y eso no es un problema</strong> — con la distancia
+      medida se ve si el sensor sigue la bajada o no, que es justo parte de lo
+      que se está probando.</p>
+  </div>
+</section>
+
+<section>
+  <h2>La planilla</h2>
+  <div class="caja">
+    <div class="campos" id="planilla">
+      <label class="campo"><span>Distancia real entre conos (m)</span><input id="q_dist" type="text" inputmode="decimal" placeholder="10.00"></label>
+      <label class="campo"><span>Hora en que arrancó</span><input id="q_hora" type="text" inputmode="numeric" placeholder="07:45:00"></label>
+      <label class="campo"><span>Saltos que hiciste</span><input id="q_salt" type="text" inputmode="numeric" placeholder="5"></label>
+      <label class="campo"><span>Patadas que hiciste</span><input id="q_pat" type="text" inputmode="numeric" placeholder="10"></label>
+      <label class="campo" style="grid-column:1/-1"><span>Sprints que salieron raros <em>(cuál y por qué)</em></span><input id="q_spr" type="text" placeholder="el 4 arranqué tarde, el 6 me frené antes..."></label>
+      <label class="campo" style="grid-column:1/-1"><span>Cualquier otra cosa que salió distinto</span><input id="q_notas" type="text" placeholder="se zafó la correa, llovió, me paré a mitad..."></label>
+    </div>
+    <p class="aviso" style="margin-top:14px">
+      <strong>No cuentes pasos.</strong> El aparato ya no los usa para nada: la
+      velocidad sale del periodo de zancada. Lo que sí necesito es la distancia
+      medida y que anotes qué salió raro.</p>
+    <p class="nota" style="margin-top:12px">
+      Si algo sale mal <strong>no repitas la grabación: anótalo</strong>. Un
+      dato con una nota honesta vale mucho más que uno perfecto que no lo es.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Al volver</h2>
+  <div class="caja">
+    <ol class="pasos">
+      <li>Conecta el USB, abre el Monitor a 115200.</li>
+      <li><code>PRUEBAS</code> — tiene que salir una sola, de <strong>324.0 s</strong>. Si dice menos, se cortó.</li>
+      <li><code>PRUEBA 0</code> y después <code>METRICAS</code>.</li>
+      <li>Cierra el Monitor y baja el crudo: <code>.\bajar.ps1 -Puerto COM9</code></li>
+      <li>Avísame y lo recojo yo de la carpeta.</li>
+    </ol>
+  </div>
+</section>
+
+</div>
+<script>
+(function () {
+  'use strict';
+  // Tiene que coincidir fase por fase con la tabla GUION del sketch 18.
+  var GUION = [
+    ['QUIETO', 15],
+    ['CAMINAR A→C', 20], ['QUIETO', 5], ['CAMINAR C→A', 20], ['QUIETO', 5],
+    ['TROTAR A→C', 12],  ['QUIETO', 5], ['TROTAR C→A', 12],  ['QUIETO', 5],
+    ['SPRINT 1 · A→C', 10], ['QUIETO', 20],
+    ['SPRINT 2 · D→B', 10], ['QUIETO', 20],
+    ['SPRINT 3 · A→C', 10], ['QUIETO', 20],
+    ['SPRINT 4 · D→B', 10], ['QUIETO', 20],
+    ['SPRINT 5 · A→C', 10], ['QUIETO', 20],
+    ['SPRINT 6 · D→B', 10], ['QUIETO', 20],
+    ['SALTOS', 15], ['QUIETO', 5], ['PATADAS', 20], ['QUIETO', 5]
+  ];
+  var MARGEN = 30;
+  var DUR = GUION.reduce(function (a, f) { return a + f[1]; }, 0);
+  var TOTAL = MARGEN + DUR;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var reloj = $('reloj'), etapa = $('etapa'), fase = $('fase'), cuenta = $('cuenta');
+  var siguiente = $('siguiente'), lleno = $('lleno'), total = $('total');
+  var btnIr = $('btnIr'), btnParar = $('btnParar');
+
+  var filas = '', acum = 0;
+  GUION.forEach(function (f, i) {
+    var quieto = f[0] === 'QUIETO';
+    var sprint = f[0].indexOf('SPRINT') === 0;
+    filas += '<tr class="' + (quieto ? 'des' : (sprint ? 'spr' : 'mov')) + '" data-i="' + i + '">' +
+      '<td class="t">' + acum + ' s</td><td class="t">' + (acum + f[1]) + ' s</td>' +
+      '<td class="n">' + f[0] + '</td></tr>';
+    acum += f[1];
+  });
+  $('tablaGuion').innerHTML = filas;
+  var filasGuion = $('tablaGuion').querySelectorAll('tr');
+
+  function guardar(k, v) { try { localStorage.setItem('cancha48_' + k, v); } catch (e) {} }
+  function leer(k) { try { return localStorage.getItem('cancha48_' + k); } catch (e) { return null; } }
+  document.querySelectorAll('input[type=checkbox][data-k]').forEach(function (c) {
+    if (leer(c.dataset.k) === '1') c.checked = true;
+    c.addEventListener('change', function () { guardar(c.dataset.k, c.checked ? '1' : '0'); });
+  });
+  document.querySelectorAll('#planilla input').forEach(function (inp) {
+    var v = leer(inp.id);
+    if (v !== null) inp.value = v;
+    inp.addEventListener('input', function () { guardar(inp.id, inp.value); });
+  });
+
+  var audio = null;
+  function pitar(hz, ms, vol) {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      var o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = hz;
+      g.gain.setValueAtTime(vol || 0.22, audio.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + ms / 1000);
+      o.connect(g); g.connect(audio.destination);
+      o.start(); o.stop(audio.currentTime + ms / 1000);
+    } catch (e) {}
+  }
+
+  // ==========================================================
+  //                 ENLACE CON EL SENSOR  (Web Bluetooth)
+  // ==========================================================
+  // UUIDs y codigos sacados del sketch 18:
+  //     servicio   19B30000-E8F2-537E-4F6C-D104768A1214
+  //     chCmd      19B30001-...   (escritura, 8 bytes)
+  //     chDatos    19B30002-...   (notificaciones, 244)
+  //
+  // CMD_REC = 0x07 y lleva confirmacion 0x5A 0xA5, para que un byte
+  // suelto no pueda gastar una prueba. La placa contesta con una
+  // notificacion 0xA3: [tipo, aceptado, prerodaje_ms(4 LE), duracion_ms(4 LE)]
+  //
+  // El cero compartido es el instante en que la escritura GATT se
+  // resuelve: la placa pone su millis() al recibir el comando, y este
+  // telefono arranca su cronometro al confirmarse el envio.
+  var SRV = '19b30000-e8f2-537e-4f6c-d104768a1214';
+  var C_CMD = '19b30001-e8f2-537e-4f6c-d104768a1214';
+  var C_DAT = '19b30002-e8f2-537e-4f6c-d104768a1214';
+  var CMD_REC = 0x07, CMD_BAT = 0x06;
+  var RSP_REC = 0xA3, RSP_BAT = 0xA7;
+
+  var btnBle = $('btnBle'), bolita = $('bolita'), estadoBle = $('estadoBle');
+  var disp = null, chCmd = null, chDat = null, grabando = false;
+
+  function sem(clase, texto) {
+    bolita.className = 'bolita' + (clase ? ' ' + clase : '');
+    estadoBle.innerHTML = texto;
+  }
+
+  // Si el navegador no trae Web Bluetooth, se dice POR QUE y se deja la
+  // pagina funcionando como cronometro. Un boton que no explica nada es
+  // peor que no tenerlo.
+  if (!navigator.bluetooth) {
+    btnBle.disabled = true;
+    sem('mal', 'Este navegador no puede');
+    $('sinBle').hidden = false;
+    $('sinBle').innerHTML = '<strong>Este navegador no tiene Web Bluetooth.</strong> ' +
+      'Funciona en <strong>Chrome en Android</strong>. En iPhone, Safari no lo ' +
+      'soporta y no hay forma de arreglarlo desde aquí. ' +
+      'Mientras tanto la página sirve igual de cronómetro: arranca el sensor con ' +
+      'los cinco golpecitos y dale a Empezar cuando veas los tres destellos largos.';
+  }
+
+  function alDesconectar() {
+    chCmd = null; chDat = null;
+    if (grabando) {
+      sem('espera', '<b>Grabando</b> · enlace soltado a propósito');
+    } else {
+      sem('', 'Se perdió la conexión');
+    }
+    btnBle.textContent = 'Conectar sensor';
+    btnBle.disabled = false;
+  }
+
+  function alNotificar(ev) {
+    var v = ev.target.value;
+    if (!v || v.byteLength < 2) return;
+    var tipo = v.getUint8(0);
+    if (tipo === RSP_REC) {
+      if (v.getUint8(1) === 1 && v.byteLength >= 10) {
+        var pre = v.getUint32(2, true) / 1000;
+        var dur = v.getUint32(6, true) / 1000;
+        sem('on', '<b>Grabando</b> · ' + Math.round(pre) + ' s de margen, ' +
+                  Math.round(dur) + ' s de guion');
+      }
+    } else if (tipo === RSP_BAT && v.byteLength >= 4) {
+      var mv = v.getUint8(1) | (v.getUint8(2) << 8);
+      sem('on', '<b>Conectado</b> · ' + (mv / 1000).toFixed(2) + ' V · ' +
+                v.getUint8(3) + '%');
+    }
+  }
+
+  async function conectar() {
+    if (!navigator.bluetooth) return;
+    btnBle.disabled = true;
+    sem('espera', 'Buscando…');
+    try {
+      disp = await navigator.bluetooth.requestDevice({
+        filters: [{ namePrefix: 'XIAO-MG24' }],
+        optionalServices: [SRV]
+      });
+      disp.addEventListener('gattserverdisconnected', alDesconectar);
+      sem('espera', 'Conectando…');
+      var srv = await disp.gatt.connect();
+      var s = await srv.getPrimaryService(SRV);
+      chCmd = await s.getCharacteristic(C_CMD);
+      chDat = await s.getCharacteristic(C_DAT);
+      await chDat.startNotifications();
+      chDat.addEventListener('characteristicvaluechanged', alNotificar);
+      grabando = false;
+      sem('on', '<b>Conectado</b>');
+      btnBle.textContent = 'Reconectar';
+      pitar(980, 110);
+      // Se pide la bateria: confirma que el enlace va en los dos
+      // sentidos, no solo que el GATT dijo que si.
+      try { await chCmd.writeValue(new Uint8Array([CMD_BAT])); } catch (e) {}
+    } catch (e) {
+      chCmd = null; chDat = null;
+      var nom = (e && e.name) ? e.name : '?';
+      var msg = (e && e.message) ? e.message : '';
+      if (nom === 'NotFoundError' && /cancel|chooser|user/i.test(msg)) {
+        sem('mal', 'Cancelaste el selector');
+      } else if (nom === 'NotFoundError') {
+        sem('mal', 'No apareció en la lista. ¿Encendido y sin grabar?');
+      } else {
+        // El error completo, tal cual. Un "no se pudo conectar" generico
+        // no permite distinguir un bloqueo por politica de permisos de un
+        // Bluetooth apagado, y son arreglos distintos.
+        sem('mal', 'Falló');
+        $('sinBle').hidden = false;
+        $('sinBle').innerHTML = '<strong>' + nom + '</strong><br>' +
+          (msg ? msg.replace(/</g, '&lt;') : '(sin mensaje)') +
+          (nom === 'SecurityError' || /permissions policy|disallowed/i.test(msg)
+            ? '<br><br><strong>Esto es el iframe.</strong> Esta página va dentro ' +
+              'de un marco de Claude y ahí el Bluetooth está prohibido por ' +
+              'política de permisos. No se arregla desde la página: hace falta ' +
+              'servirla desde otro sitio, o arrancar el sensor con otra app.'
+            : '');
+      }
+    }
+    btnBle.disabled = false;
+  }
+  btnBle.addEventListener('click', conectar);
+
+  var candado = null;
+  async function pedirCandado() {
+    try { if (navigator.wakeLock) candado = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  function soltarCandado() { try { if (candado) { candado.release(); candado = null; } } catch (e) {} }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && corriendo && !candado) pedirCandado();
+  });
+
+  var corriendo = false, t0 = 0, ultimaFase = -2, tic = null, ultimoAviso = -1;
+  var desfase = 0;
+
+  function mmss(s) {
+    s = Math.max(0, Math.round(s));
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  }
+  function faseEn(t) {
+    if (t < MARGEN) return -1;
+    var a = MARGEN;
+    for (var i = 0; i < GUION.length; i++) { if (t < a + GUION[i][1]) return i; a += GUION[i][1]; }
+    return GUION.length;
+  }
+  function finDe(i) { var a = MARGEN; for (var k = 0; k <= i; k++) a += GUION[k][1]; return a; }
+
+  function pintar(t) {
+    var i = faseEn(t), color;
+    if (i === -1) {
+      var falta = Math.ceil(MARGEN - t);
+      etapa.textContent = 'Margen · ponte en el cono A';
+      fase.textContent = falta <= 5 ? 'YA VA' : 'PREPÁRATE';
+      cuenta.innerHTML = falta + '<small>s</small>';
+      siguiente.innerHTML = 'Empieza a grabar en <b>' + falta + ' s</b> — ponte en el cono A';
+      color = 'var(--amber)';
+      if (falta <= 5 && falta >= 1 && falta !== ultimoAviso) { ultimoAviso = falta; pitar(600, 90, 0.18); }
+    } else if (i >= GUION.length) {
+      etapa.textContent = 'Terminado';
+      fase.textContent = 'LISTO';
+      cuenta.innerHTML = '✓';
+      siguiente.innerHTML = 'Ya puedes parar. No olvides anotar la planilla.';
+      color = 'var(--pitch)';
+    } else {
+      var f = GUION[i], quieto = f[0] === 'QUIETO';
+      var sprint = f[0].indexOf('SPRINT') === 0;
+      etapa.textContent = 'Fase ' + (i + 1) + ' de ' + GUION.length;
+      fase.textContent = f[0];
+      cuenta.innerHTML = Math.ceil(finDe(i) - t) + '<small>s</small>';
+      siguiente.innerHTML = (i + 1 < GUION.length)
+        ? 'Luego: <b>' + GUION[i + 1][0] + '</b>' : 'Es la última fase';
+      color = quieto ? 'var(--rest)' : (sprint ? 'var(--amber)' : 'var(--pitch)');
+    }
+    reloj.style.setProperty('--estado', color);
+    lleno.style.width = Math.min(100, t / TOTAL * 100) + '%';
+    total.textContent = mmss(t) + ' / ' + mmss(TOTAL);
+    filasGuion.forEach(function (tr, k) { tr.classList.toggle('activa', k === i); });
+
+    if (i !== ultimaFase) {
+      if (ultimaFase !== -2) {
+        if (i === 0) { pitar(880,160); setTimeout(function(){pitar(880,160);},200); setTimeout(function(){pitar(1320,320);},420); }
+        else if (i >= GUION.length) { pitar(660, 500); }
+        else if (GUION[i][0].indexOf('SPRINT') === 0) {
+          pitar(1320, 110); setTimeout(function(){pitar(1320,110);},150); setTimeout(function(){pitar(1600,240);},320);
+        }
+        else { pitar(GUION[i][0] === 'QUIETO' ? 520 : 1040, 190); }
+      }
+      ultimaFase = i;
+      if (i >= GUION.length) parar(true);
+    }
+  }
+
+  function pintarDesfase() {
+    $('desfase').textContent = (desfase > 0 ? '+' : '') + desfase;
+    // Con el enlace por Bluetooth el cero lo pone este telefono, asi que
+    // no hay desfase que corregir y el ajuste solo estorba.
+    $('ajuste').hidden = !corriendo || !!chCmd;
+  }
+  $('btnMas').addEventListener('click', function () { if (corriendo) { desfase += 1; pintarDesfase(); marcar(); } });
+  $('btnMenos').addEventListener('click', function () { if (corriendo) { desfase -= 1; pintarDesfase(); marcar(); } });
+
+  function marcar() { pintar(Math.min((Date.now() - t0) / 1000 + desfase, TOTAL)); }
+
+  function ponerHora(cuando) {
+    var h = new Date(cuando + MARGEN * 1000);
+    var hh = String(h.getHours()).padStart(2,'0') + ':' + String(h.getMinutes()).padStart(2,'0') +
+             ':' + String(h.getSeconds()).padStart(2,'0');
+    var campo = $('q_hora');
+    if (campo && !campo.value) { campo.value = hh; guardar('q_hora', hh); }
+  }
+
+  function enMarcha() {
+    corriendo = true; ultimaFase = -2; ultimoAviso = -1;
+    desfase = 0; pintarDesfase();
+    btnIr.disabled = true; btnParar.disabled = false; btnIr.textContent = 'Corriendo…';
+    ponerHora(t0);
+    pedirCandado(); marcar();
+    tic = setInterval(marcar, 200);
+  }
+
+  async function arrancar() {
+    btnIr.disabled = true;
+    // Despertar el audio dentro del gesto del usuario: si se deja para
+    // despues del await, iOS y Android ya no lo permiten.
+    pitar(740, 120);
+
+    if (chCmd) {
+      btnIr.textContent = 'Mandando…';
+      try {
+        await chCmd.writeValue(new Uint8Array([CMD_REC, 0x5A, 0xA5]));
+        t0 = Date.now();              // el cero compartido
+        grabando = true;
+        sem('espera', '<b>Orden enviada</b> · esperando acuse');
+      } catch (e) {
+        btnIr.disabled = false; btnIr.textContent = 'Empezar';
+        sem('mal', 'No se pudo mandar la orden');
+        siguiente.innerHTML = '<b>No salió.</b> Reconecta, o arranca a golpes y dale otra vez.';
+        return;
+      }
+    } else {
+      t0 = Date.now();
+    }
+    enMarcha();
+  }
+
+  function parar(terminado) {
+    corriendo = false; clearInterval(tic); tic = null; soltarCandado();
+    btnIr.disabled = false; btnParar.disabled = true;
+    btnIr.textContent = terminado ? 'Otra vez' : 'Empezar';
+    if (terminado) grabando = false;
+    if (!terminado) {
+      grabando = false;
+      etapa.textContent = 'Detenido'; fase.textContent = 'Listo'; cuenta.textContent = '—';
+      siguiente.textContent = 'Conecta el sensor, o arráncalo a golpes y dale a Empezar';
+      reloj.style.setProperty('--estado', 'var(--line)');
+      lleno.style.width = '0'; total.textContent = '0:00 / ' + mmss(TOTAL);
+      filasGuion.forEach(function (tr) { tr.classList.remove('activa'); });
+      $('ajuste').hidden = true;
+    }
+  }
+
+  btnIr.addEventListener('click', arrancar);
+  btnParar.addEventListener('click', function () { parar(false); });
+  total.textContent = '0:00 / ' + mmss(TOTAL);
+})();
+</script>
+</body></html>
