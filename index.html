@@ -130,13 +130,14 @@ tr.activa { background:var(--amber-sf); }
 <div class="hoja">
 
 <h1>Protocolo de cancha</h1>
-<p class="lede">Sensor XIAO MG24 · sketch 18 <b>v48</b> · 324 s · cuatro conos cada 10 m</p>
+<p class="lede">Sensor XIAO MG24 · sketch 18 <b>v51</b> · 324 s · cuatro conos cada 10 m</p>
 
 <section>
   <h2>Arrancar el sensor</h2>
   <div class="caja">
     <div class="enlace">
       <button id="btnBle">Conectar sensor</button>
+      <button id="btnTodos" style="min-width:152px">Buscar sin filtro</button>
       <div class="sem"><span class="bolita" id="bolita"></span><span id="estadoBle">Sin conectar</span></div>
     </div>
     <p class="nota" style="margin:12px 0 0">
@@ -151,6 +152,33 @@ tr.activa { background:var(--amber-sf); }
       los <strong>tres destellos largos</strong>. Pero entonces el cero lo pone
       la placa y el guion queda corrido uno o dos segundos.
     </p>
+    <div class="caja" style="margin-top:14px;padding:12px">
+      <p class="nota" style="margin:0 0 8px"><strong>Lo que hace el LED amarillo.</strong>
+        El rojo es el de carga y el firmware no lo toca.</p>
+      <div class="envoltura">
+        <table>
+          <tbody>
+            <tr><td class="t">un destello cada 2 s</td><td>libre, flash vacía</td></tr>
+            <tr><td class="t">dos destellos cada 2 s</td><td>libre, con una sesión sin bajar</td></tr>
+            <tr><td class="t">un destello por golpe</td><td>golpe contado</td></tr>
+            <tr class="spr"><td class="t"><strong>TRES destellos largos</strong></td><td class="n">arrancó — la misma señal por el teléfono que a golpes</td></tr>
+            <tr><td class="t">parpadeo rápido</td><td>los 30 s de margen; al triple los últimos 5</td></tr>
+            <tr><td class="t">parpadeo <em>lento</em></td><td>grabando, fase de QUIETO</td></tr>
+            <tr class="mov"><td class="t">fijo encendido</td><td class="n">grabando, fase de movimiento</td></tr>
+            <tr class="spr"><td class="t"><strong>DOS destellos largos</strong></td><td class="n">terminó y <strong>guardó</strong></td></tr>
+            <tr><td class="t">seis destellos cortos</td><td>se niega a grabar: no cabe</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota" style="margin:10px 0 0">
+        Los dos parpadeos no son iguales: el del margen es <strong>el doble de
+        rápido</strong> que el de QUIETO. Hasta la v50 iban casi a la misma
+        velocidad, y como la primera fase del guion es un QUIETO de 15 s se
+        veían <strong>45 segundos sin cambio aparente</strong> — el 20 de
+        noviembre eso hizo creer en la cancha que no había arrancado, con la
+        grabación corriendo.
+      </p>
+    </div>
     <div class="sinble" id="sinBle" hidden></div>
   </div>
 </section>
@@ -179,7 +207,10 @@ tr.activa { background:var(--amber-sf); }
     Sube el volumen: el LED va tapado dentro de la carcaza y pegado al pie,
     así que <strong>los pitos son la única señal</strong> mientras corres.
     Tres pitos = empezó a grabar. Grave = empieza un QUIETO. Agudo = empieza
-    un tramo. Largo y grave = terminó.</p>
+    un tramo. Triple agudo = empieza un SPRINT. Largo y grave = terminó.</p>
+  <p class="aviso">
+    Al terminar, <strong>antes de moverte del sitio</strong>: dos destellos
+    largos en el amarillo = la cabecera está escrita y la sesión está a salvo.</p>
   <p class="aviso">
     Al mandar la orden, <strong>la placa suelta el Bluetooth a propósito</strong>:
     escribir en la flash con la radio encendida tumba el enlace. Que diga
@@ -215,7 +246,7 @@ tr.activa { background:var(--amber-sf); }
 <section>
   <h2>Antes de salir</h2>
   <div class="caja" id="listaPrevia">
-    <label class="check"><input type="checkbox" data-k="m1"><span>Grabados <strong>los dos</strong> archivos (<code>.ino</code> y <code>compresor.h</code>), y confirmado con <code>INFO</code> que diga <code>Firmware: v48</code></span></label>
+    <label class="check"><input type="checkbox" data-k="m1"><span>Grabados <strong>los dos</strong> archivos (<code>.ino</code> y <code>compresor.h</code>), y confirmado con <code>INFO</code> que diga <code>Firmware: v51</code></span></label>
     <label class="check"><input type="checkbox" data-k="m2"><span><code>BORRAR</code> en el Monitor — solo caben <strong>2 sesiones</strong> por flash a esta duración</span></label>
     <label class="check"><input type="checkbox" data-k="m3"><span>Probado el <strong>Conectar sensor</strong> aquí en la mesa, con el USB puesto, y visto en el Monitor <code>BLE: REC -- cero fijado por el celular</code></span></label>
     <label class="check"><input type="checkbox" data-k="m4"><span>Batería cargada — míralo con <code>BAT</code>, sin el USB puesto</span></label>
@@ -414,15 +445,26 @@ tr.activa { background:var(--amber-sf); }
     }
   }
 
-  async function conectar() {
+  // Dos modos de busqueda, y la diferencia diagnostica:
+  //
+  //   filtrado    -> Chrome solo lista lo que lleve el nombre XIAO-MG24 o el
+  //                  servicio DENTRO del paquete de anuncio.
+  //   sin filtro  -> lista todo lo que haya cerca, con nombre o sin el, igual
+  //                  que hace nRF Connect.
+  //
+  // Si el sensor sale en el segundo y no en el primero, lo que falla es que
+  // el nombre no viaja en el anuncio. Si no sale en ninguno, en ese momento
+  // no estaba anunciandose -- cosa distinta y con otro arreglo.
+  async function conectar(todos) {
     if (!navigator.bluetooth) return;
-    btnBle.disabled = true;
-    sem('espera', 'Buscando…');
+    btnBle.disabled = true; $('btnTodos').disabled = true;
+    $('sinBle').hidden = true;
+    sem('espera', todos ? 'Buscando todo…' : 'Buscando…');
     try {
-      disp = await navigator.bluetooth.requestDevice({
-        filters: [{ namePrefix: 'XIAO-MG24' }],
-        optionalServices: [SRV]
-      });
+      disp = await navigator.bluetooth.requestDevice(todos
+        ? { acceptAllDevices: true, optionalServices: [SRV] }
+        : { filters: [{ namePrefix: 'XIAO-MG24' }, { services: [SRV] }],
+            optionalServices: [SRV] });
       disp.addEventListener('gattserverdisconnected', alDesconectar);
       sem('espera', 'Conectando…');
       var srv = await disp.gatt.connect();
@@ -445,7 +487,13 @@ tr.activa { background:var(--amber-sf); }
       if (nom === 'NotFoundError' && /cancel|chooser|user/i.test(msg)) {
         sem('mal', 'Cancelaste el selector');
       } else if (nom === 'NotFoundError') {
-        sem('mal', 'No apareció en la lista. ¿Encendido y sin grabar?');
+        sem('mal', 'No apareció en la lista');
+        $('sinBle').hidden = false;
+        $('sinBle').innerHTML = 'La lista salió sin el sensor. Dale ahora a ' +
+          '<strong>Buscar sin filtro</strong>: ahí salen todos los aparatos de ' +
+          'alrededor, con nombre o sin él, igual que en nRF Connect. ' +
+          'Si ahí sí aparece, el problema es el nombre en el anuncio. ' +
+          'Si tampoco, es que no estaba anunciándose.';
       } else {
         // El error completo, tal cual. Un "no se pudo conectar" generico
         // no permite distinguir un bloqueo por politica de permisos de un
@@ -462,9 +510,10 @@ tr.activa { background:var(--amber-sf); }
             : '');
       }
     }
-    btnBle.disabled = false;
+    btnBle.disabled = false; $('btnTodos').disabled = false;
   }
-  btnBle.addEventListener('click', conectar);
+  btnBle.addEventListener('click', function () { conectar(false); });
+  $('btnTodos').addEventListener('click', function () { conectar(true); });
 
   var candado = null;
   async function pedirCandado() {
